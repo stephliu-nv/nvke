@@ -12,7 +12,7 @@ func Tenant() []resource.Registration {
 	return []resource.Registration{NVKECluster()}
 }
 
-// Operator exposes release and machine-image publication.
+// Operator exposes releases, release channels, and machine images.
 func Operator() []resource.Registration {
-	return []resource.Registration{ClusterRelease(), MachineImage()}
+	return []resource.Registration{ClusterRelease(), MachineImage(), ClusterReleaseChannel()}
 }

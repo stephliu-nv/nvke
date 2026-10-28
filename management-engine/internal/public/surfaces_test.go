@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ import (
 func TestSurfaces(t *testing.T) {
 	responses := map[string]any{}
 	discovery := metav1.APIResourceList{GroupVersion: "internal.nvke.nvidia.com/v1"}
-	for _, name := range []string{"nvkeclusters", "clusterreleases", "machineimages"} {
+	for _, name := range []string{"nvkeclusters", "clusterreleases", "machineimages", "clusterreleasechannels"} {
 		data, err := os.ReadFile("../../config/crd/bases/internal.nvke.nvidia.com_" + name + ".yaml")
 		require.NoError(t, err)
 		var crd apiextensionsv1.CustomResourceDefinition
@@ -41,12 +42,12 @@ func TestSurfaces(t *testing.T) {
 	tokens, err := resource.NewTokens(make([]byte, 32))
 	require.NoError(t, err)
 	for _, surface := range []struct {
-		name                               string
-		registrations                      []resource.Registration
-		clusters, releases, writes, images bool
+		name                                         string
+		registrations                                []resource.Registration
+		clusters, releases, writes, images, channels bool
 	}{
 		{name: "tenant", registrations: Tenant(), clusters: true},
-		{name: "operator", registrations: Operator(), releases: true, writes: true, images: true},
+		{name: "operator", registrations: Operator(), releases: true, writes: true, images: true, channels: true},
 		{name: "custom read-only selection", registrations: []resource.Registration{
 			ClusterRelease(resource.OpGet, resource.OpList),
 		}, releases: true},
@@ -70,8 +71,14 @@ func TestSurfaces(t *testing.T) {
 				{"POST", "/v1/cluster-releases", surface.writes},
 				{"GET", "/v1/machine-images", surface.images},
 				{"POST", "/v1/machine-images", surface.images},
+				{"POST", "/v1/release-channels", surface.channels},
+				{"GET", "/v1/release-channels", surface.channels},
+				{"GET", "/v1/release-channels/{name}", surface.channels},
+				{"PUT", "/v1/release-channels/{name}", surface.channels},
+				{"DELETE", "/v1/release-channels/{name}", surface.channels},
 			} {
-				_, pattern := mux.Handler(httptest.NewRequest(route.method, route.path, nil))
+				path := strings.ReplaceAll(route.path, "{name}", "pinned")
+				_, pattern := mux.Handler(httptest.NewRequest(route.method, path, nil))
 				require.Equal(t, route.enabled, pattern == route.method+" "+route.path, "%s %s", route.method, route.path)
 			}
 		})
