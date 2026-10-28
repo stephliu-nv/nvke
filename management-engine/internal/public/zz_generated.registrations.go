@@ -37,3 +37,12 @@ func MachineImage(verbs ...resource.Operation) resource.Registration {
 		HasStatus: false, Verbs: verbs,
 	})
 }
+
+// ClusterReleaseChannel registers ReleaseChannel with the caller's selected operations.
+func ClusterReleaseChannel(verbs ...resource.Operation) resource.Registration {
+	return resource.Register[v1.ReleaseChannel, v1.ClusterReleaseChannel]("/v1/release-channels", resource.ResourceInfo{
+		GVK:      schema.GroupVersionKind{Group: "internal.nvke.nvidia.com", Version: "v1", Kind: "ClusterReleaseChannel"},
+		Resource: "clusterreleasechannels", Scope: resource.Scope("Cluster"),
+		HasStatus: false, Verbs: verbs,
+	})
+}

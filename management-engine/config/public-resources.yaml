@@ -12,3 +12,7 @@
   public: PublicMachineImage
   path: /v1/machine-images
   metadata: [name, creationTimestamp, deletionTimestamp, uid]
+- source: ClusterReleaseChannel
+  public: ReleaseChannel
+  path: /v1/release-channels
+  metadata: [name, creationTimestamp, deletionTimestamp, uid]

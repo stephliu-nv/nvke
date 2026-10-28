@@ -23,5 +23,5 @@ patches:
       path: /rules/-
       value:
         apiGroups: [internal.nvke.nvidia.com]
-        resources: [nvkeclusters, clusterreleases, machineimages]
+        resources: [nvkeclusters, clusterreleases, machineimages, clusterreleasechannels]
         verbs: [create, get, list, patch, delete]

@@ -17,12 +17,14 @@ import (
 )
 
 var (
-	_ resource.ResourceHandler[v1.NVKECluster]          = v1.Cluster{}
-	_ resource.ResourceHandler[v1.Cluster]              = v1.NVKECluster{}
-	_ resource.ResourceHandler[v1.ClusterRelease]       = v1.PublicClusterRelease{}
-	_ resource.ResourceHandler[v1.PublicClusterRelease] = v1.ClusterRelease{}
-	_ resource.ResourceHandler[v1.MachineImage]         = v1.PublicMachineImage{}
-	_ resource.ResourceHandler[v1.PublicMachineImage]   = v1.MachineImage{}
+	_ resource.ResourceHandler[v1.NVKECluster]           = v1.Cluster{}
+	_ resource.ResourceHandler[v1.Cluster]               = v1.NVKECluster{}
+	_ resource.ResourceHandler[v1.ClusterRelease]        = v1.PublicClusterRelease{}
+	_ resource.ResourceHandler[v1.PublicClusterRelease]  = v1.ClusterRelease{}
+	_ resource.ResourceHandler[v1.MachineImage]          = v1.PublicMachineImage{}
+	_ resource.ResourceHandler[v1.PublicMachineImage]    = v1.MachineImage{}
+	_ resource.ResourceHandler[v1.ClusterReleaseChannel] = v1.ReleaseChannel{}
+	_ resource.ResourceHandler[v1.ReleaseChannel]        = v1.ClusterReleaseChannel{}
 )
 
 func TestClusterProjection(t *testing.T) {
@@ -65,8 +67,34 @@ func TestClusterProjection(t *testing.T) {
 	require.NotEqual(t, internal.Spec.NodePools[0].InstanceType, public.Spec.NodePools[0].InstanceType)
 }
 
+func TestReleaseChannelProjection(t *testing.T) {
+	data, err := os.ReadFile("../../config/samples/internal_v1_clusterreleasechannel.yaml")
+	require.NoError(t, err)
+	var internal v1.ClusterReleaseChannel
+	require.NoError(t, yaml.Unmarshal(data, &internal))
+	internal.ObjectMeta = metav1.ObjectMeta{
+		Name: "pinned", UID: "channel-uid", ResourceVersion: "private-version",
+		Labels: map[string]string{"private": "label"},
+	}
+	public, err := internal.Convert()
+	require.NoError(t, err)
+	require.Equal(t, internal.Spec, public.Spec)
+	encoded, err := json.Marshal(public)
+	require.NoError(t, err)
+	require.JSONEq(t, `{
+		"metadata": {"name": "pinned", "uid": "channel-uid"},
+		"spec": {"releases": {"1.35": [{"name": "example-release", "minimumUpgradeAge": "168h0m0s"}]}}
+	}`, string(encoded))
+	restored, err := public.Convert()
+	require.NoError(t, err)
+	require.Equal(t, internal.Spec, restored.Spec)
+	require.Equal(t, metav1.ObjectMeta{Name: "pinned", UID: "channel-uid"}, restored.ObjectMeta)
+	public.Spec.Releases["1.35"][0].Name = "changed"
+	require.NotEqual(t, internal.Spec.Releases["1.35"][0].Name, public.Spec.Releases["1.35"][0].Name)
+}
+
 func TestPublicWriteOmitsUnsetReadOnlyFields(t *testing.T) {
-	for _, value := range []any{v1.Cluster{}, v1.PublicClusterRelease{}, v1.PublicMachineImage{}} {
+	for _, value := range []any{v1.Cluster{}, v1.PublicClusterRelease{}, v1.PublicMachineImage{}, v1.ReleaseChannel{}} {
 		data, err := json.Marshal(value)
 		require.NoError(t, err)
 		var object map[string]any

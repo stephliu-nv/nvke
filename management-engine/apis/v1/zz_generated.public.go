@@ -110,3 +110,36 @@ func (PublicMachineImage) Validate() error { return nil }
 
 // Validate leaves internal schema checks to datastore admission.
 func (MachineImage) Validate() error { return nil }
+
+// ReleaseChannel reuses the complete approved spec/status of ClusterReleaseChannel.
+// Only metadata is filtered automatically, by its explicit allowlist.
+// +kubebuilder:object:generate=false
+type ReleaseChannel struct {
+	Metadata ReleaseChannelMetadata    `json:"metadata"`
+	Spec     ClusterReleaseChannelSpec `json:"spec"`
+}
+
+// ReleaseChannelMetadata contains only the metadata approved for this public resource.
+// +kubebuilder:object:generate=false
+type ReleaseChannelMetadata struct {
+	Name              string       `json:"name,omitempty"`
+	CreationTimestamp metav1.Time  `json:"creationTimestamp,omitempty,omitzero"`
+	DeletionTimestamp *metav1.Time `json:"deletionTimestamp,omitempty"`
+	UID               types.UID    `json:"uid,omitempty"`
+}
+
+// Convert maps ReleaseChannel to its datastore representation using matching JSON names.
+func (in ReleaseChannel) Convert() (ClusterReleaseChannel, error) {
+	return projection.JSON[ClusterReleaseChannel](in)
+}
+
+// Convert exposes only the public fields of ClusterReleaseChannel.
+func (in ClusterReleaseChannel) Convert() (ReleaseChannel, error) {
+	return projection.JSON[ReleaseChannel](in)
+}
+
+// Validate leaves schema checks to datastore admission; this resource adds no public rules.
+func (ReleaseChannel) Validate() error { return nil }
+
+// Validate leaves internal schema checks to datastore admission.
+func (ClusterReleaseChannel) Validate() error { return nil }
